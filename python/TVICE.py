@@ -98,5 +98,6 @@ def tvice(u0,sig,lambd,niter):
         X_1 = np.exp(X_1-M)
         X_2 = np.exp(X_2-M)
         u[1:-1,1:-1] = u0 + 2*lambd*sig**2 * (2*X_minus2+X_minus1-X_1-2*X_2)/(X_minus2+X_minus1+X_0+X_1+X_2)
-        u = u[1:-1,1:-1]             
+        u = u[1:-1,1:-1]
+        print(u[3,3])               
     return u
