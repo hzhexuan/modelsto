@@ -70,12 +70,13 @@ def padding(im):
 
 def calculate_logX(t, neibor, sig, lambd):
     a, b, c, d = neibor[0], neibor[1], neibor[2], neibor[3]
-    X_minus2 = 2*lambd*(2*(t+2*lambd*sig**2)-a-b) * logerfc((t-a+4*lambd*sig**2)/sig/np.sqrt(2))
-    X_minus1 = lambd*2*(t-b+lambd*sig**2) * logerf2((a-t-2*lambd*sig**2)/sig/np.sqrt(2), (b-t-2*lambd*sig**2)/sig/np.sqrt(2))
+    X_minus2 = 2*lambd*(2*(t+2*lambd*sig**2)-a-b) + logerfc((t-a+4*lambd*sig**2)/sig/np.sqrt(2))
+    X_minus1 = lambd*2*(t-b+lambd*sig**2) + logerf2((a-t-2*lambd*sig**2)/sig/np.sqrt(2), (b-t-2*lambd*sig**2)/sig/np.sqrt(2))
     X_0 = logerf2((b-t)/sig/np.sqrt(2), (c-t)/sig/np.sqrt(2))
-    X_1 = lambd*2*(c-t+lambd*sig**2) * logerf2((c-t-2*lambd*sig**2)/sig/np.sqrt(2), (d-t-2*lambd*sig**2)/sig/np.sqrt(2))
-    X_2 = 2*lambd*(c+d-2*(t-2*lambd*sig**2)) * logerfc((d-t+4*lambd*sig**2)/sig/np.sqrt(2))
+    X_1 = lambd*2*(c-t+lambd*sig**2) + logerf2((c-t+2*lambd*sig**2)/sig/np.sqrt(2), (d-t+2*lambd*sig**2)/sig/np.sqrt(2))
+    X_2 = 2*lambd*(c+d-2*(t-2*lambd*sig**2)) + logerfc((d-t+4*lambd*sig**2)/sig/np.sqrt(2))
     return X_minus2, X_minus1, X_0, X_1, X_2
+
 def tvice(u0,sig,lambd,niter): 
 # usage: out = tvice(u0,sigma,lambda,niter) 
 # TV-ICE denoising algorithm (vectorized version)
@@ -84,13 +85,9 @@ def tvice(u0,sig,lambd,niter):
     ny, nx = u.shape
     for k in range(niter):
         u = padding(u)
-        #t = u[1:-1,1:-1]
-        t = u0
-        nebor = np.stack([u[1:-1,:-2],u[1:-1,2:],u[:-2,1:-1],u[2:,1:-1]], axis=0)
-        nebor = nebor.reshape([-1,ny*nx])
+        nebor = np.stack([u[1:-1,:-2],u[1:-1,2:],u[:-2,1:-1],u[2:,1:-1]], axis=0) #(4, 100, 100)
         nebor.sort(axis=0)
-        nebor = nebor.reshape([-1,ny,nx])
-        X_minus2, X_minus1, X_0, X_1, X_2 = calculate_logX(t,nebor,sig,lambd)
+        X_minus2, X_minus1, X_0, X_1, X_2 = calculate_logX(u0,nebor,sig,lambd)
         M = np.max(np.stack([X_minus2, X_minus1, X_0, X_1, X_2]),axis=0)
         X_minus2 = np.exp(X_minus2-M)
         X_minus1 = np.exp(X_minus1-M)
@@ -99,5 +96,5 @@ def tvice(u0,sig,lambd,niter):
         X_2 = np.exp(X_2-M)
         u[1:-1,1:-1] = u0 + 2*lambd*sig**2 * (2*X_minus2+X_minus1-X_1-2*X_2)/(X_minus2+X_minus1+X_0+X_1+X_2)
         u = u[1:-1,1:-1]
-        print(u[3,3])               
+        #print(u[6,6])               
     return u
